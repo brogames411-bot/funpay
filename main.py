@@ -146,9 +146,11 @@ async def check_lots():
                     )
 
                     # Фильтр сервера
-                    if SERVER_NAME.lower() not in text.lower():
+                    print(text)
+                    
+                    if "lipetsk" not in text.lower():
                         continue
-
+                    
                     # Цена
                     price_block = lot.find(
                         "div",
