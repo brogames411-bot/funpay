@@ -7,10 +7,6 @@ from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 from aiogram.types import Message
 
-# =====================================================
-# НАСТРОЙКИ
-# =====================================================
-
 BOT_TOKEN = "8991586803:AAHSY-Olyc8SpExGBSLeEYpeiz_dK7gauf8"
 CHAT_ID = "561985152"
 
@@ -21,8 +17,6 @@ MAX_PRICE = 30
 
 CHECK_DELAY = 10
 
-# =====================================================
-
 bot = Bot(
     token=BOT_TOKEN,
     default=DefaultBotProperties(
@@ -32,25 +26,18 @@ bot = Bot(
 
 dp = Dispatcher()
 
-# Вкл / выкл
 is_running = True
-
-# Антидубликаты
 sent_lots = set()
 
-
-# =====================================================
-# TELEGRAM COMMANDS
-# =====================================================
 
 @dp.message(F.text == "/start")
 async def start(message: Message):
 
     await message.answer(
         "🤖 Бот запущен\n\n"
-        "/on — включить\n"
-        "/off — выключить\n"
-        "/status — статус"
+        "/on — включить мониторинг\n"
+        "/off — выключить мониторинг\n"
+        "/status — статус бота"
     )
 
 
@@ -88,16 +75,14 @@ async def status(message: Message):
     )
 
 
-# =====================================================
-# PARSER
-# =====================================================
-
 async def get_html():
 
     headers = {
         "User-Agent": (
             "Mozilla/5.0 "
-            "Windows NT 10.0; Win64; x64"
+            "(Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 "
+            "Chrome/122.0.0.0 Safari/537.36"
         )
     }
 
@@ -111,15 +96,16 @@ async def get_html():
 
 
 async def check_lots():
-    print("ПАРСЕР РАБОТАЕТ")
+
     global sent_lots
     global is_running
+
+    print("ПАРСЕР РАБОТАЕТ")
 
     while True:
 
         try:
 
-            # Если выключен
             if not is_running:
                 await asyncio.sleep(1)
                 continue
@@ -131,110 +117,120 @@ async def check_lots():
                 "html.parser"
             )
 
-            lots = soup.find_all(
-                "a",
-                class_="tc-item"
-            )
+            lots = soup.select("a.tc-item")
+
+            print(f"Найдено лотов: {len(lots)}")
 
             for lot in lots:
-            
+
                 try:
-            
-                    text = lot.get_text(" ", strip=True)
-            
-                    # DEBUG
-                    print(text)
-            
-                    # Только нужный сервер
+
+                    text = lot.get_text(
+                        " ",
+                        strip=True
+                    )
+
                     if "lipetsk" not in text.lower():
                         continue
-            
-                    # Цена
-                    price_block = lot.find(
-                        "div",
-                        class_="tc-price"
-                    )
-            
-                    if not price_block:
+
+                    price = None
+
+                    for element in lot.find_all():
+
+                        element_text = (
+                            element.get_text(strip=True)
+                        )
+
+                        if "₽" in element_text:
+
+                            try:
+
+                                clean_price = (
+                                    element_text
+                                    .replace("₽", "")
+                                    .replace(" ", "")
+                                    .replace(",", ".")
+                                )
+
+                                price = float(clean_price)
+                                break
+
+                            except:
+                                pass
+
+                    if price is None:
                         continue
-            
-                    price_text = (
-                        price_block.text
-                        .replace("₽", "")
-                        .replace(" ", "")
-                        .replace(",", ".")
-                        .strip()
-                    )
-            
-                    price = float(price_text)
-            
+
                     print("ЦЕНА:", price)
-            
-                    # Только дешевле 30
-                    if price > 30:
+
+                    if price > MAX_PRICE:
                         continue
-            
+
                     print("ДЕШЕВЫЙ ЛОТ НАЙДЕН")
-            
-                    # Продавец
-                    seller_block = lot.find(
-                        "div",
-                        class_="media-user-name"
+
+                    seller = "Unknown"
+
+                    seller_block = lot.select_one(
+                        ".media-user-name"
                     )
-            
-                    seller = (
-                        seller_block.text.strip()
-                        if seller_block
-                        else "Unknown"
-                    )
-            
+
+                    if seller_block:
+                        seller = (
+                            seller_block.text.strip()
+                        )
+
+                    href = lot.get("href")
+
+                    if not href:
+                        continue
+
                     lot_link = (
                         "https://funpay.com"
-                        + lot.get("href")
+                        + href
                     )
-            
-                    unique_id = f"{lot_link}_{price}"
-            
+
+                    unique_id = (
+                        f"{lot_link}_{price}"
+                    )
+
                     if unique_id in sent_lots:
                         continue
-            
+
                     sent_lots.add(unique_id)
-            
-                    print("ОТПРАВЛЯЮ В TG")
-            
+
+                    print("ОТПРАВЛЯЮ В TELEGRAM")
+
                     await bot.send_message(
                         CHAT_ID,
-                        f"🔥 Дешевый лот!\n\n"
-                        f"💰 {price} ₽\n"
-                        f"👤 {seller}\n\n"
-                        f"{lot_link}"
+                        f"🔥 <b>Дешевый лот найден!</b>\n\n"
+                        f"🎮 Сервер: <b>{SERVER_NAME}</b>\n"
+                        f"💰 Цена: <b>{price} ₽</b>\n"
+                        f"👤 Продавец: <b>{seller}</b>\n\n"
+                        f"🔗 {lot_link}"
                     )
-            
+
                 except Exception as e:
-                    print(e)
+                    print("Ошибка лота:", e)
 
             await asyncio.sleep(CHECK_DELAY)
 
         except Exception as e:
 
-            print("Ошибка:", e)
+            print("Ошибка парсера:", e)
 
             await asyncio.sleep(5)
 
-
-# =====================================================
-# MAIN
-# =====================================================
 
 async def main():
 
     print("Бот запущен")
 
-    # Запускаем парсер отдельно
-    asyncio.create_task(check_lots())
+    asyncio.create_task(
+        check_lots()
+    )
 
-    # Telegram polling
     await dp.start_polling(bot)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
