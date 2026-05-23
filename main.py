@@ -111,7 +111,7 @@ async def get_html():
 
 
 async def check_lots():
-
+    print("ПАРСЕР РАБОТАЕТ")
     global sent_lots
     global is_running
 
