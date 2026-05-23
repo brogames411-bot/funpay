@@ -12,7 +12,7 @@ from aiogram.types import Message
 # =====================================================
 
 BOT_TOKEN = "8991586803:AAHSY-Olyc8SpExGBSLeEYpeiz_dK7gauf8"
-CHAT_ID = 561985152
+CHAT_ID = "561985152"
 
 URL = "https://funpay.com/chips/186/"
 
