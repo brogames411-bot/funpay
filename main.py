@@ -137,29 +137,27 @@ async def check_lots():
             )
 
             for lot in lots:
-
+            
                 try:
-
-                    text = lot.get_text(
-                        " ",
-                        strip=True
-                    )
-
-                    # Фильтр сервера
+            
+                    text = lot.get_text(" ", strip=True)
+            
+                    # DEBUG
                     print(text)
-                    
+            
+                    # Только нужный сервер
                     if "lipetsk" not in text.lower():
                         continue
-                    
+            
                     # Цена
                     price_block = lot.find(
                         "div",
                         class_="tc-price"
                     )
-
+            
                     if not price_block:
                         continue
-
+            
                     price_text = (
                         price_block.text
                         .replace("₽", "")
@@ -167,57 +165,53 @@ async def check_lots():
                         .replace(",", ".")
                         .strip()
                     )
-
+            
                     price = float(price_text)
-
-                    # Лимит цены
-                    if price > MAX_PRICE:
+            
+                    print("ЦЕНА:", price)
+            
+                    # Только дешевле 30
+                    if price > 30:
                         continue
-
+            
+                    print("ДЕШЕВЫЙ ЛОТ НАЙДЕН")
+            
                     # Продавец
                     seller_block = lot.find(
                         "div",
                         class_="media-user-name"
                     )
-
+            
                     seller = (
                         seller_block.text.strip()
                         if seller_block
                         else "Unknown"
                     )
-
-                    # Ссылка
+            
                     lot_link = (
                         "https://funpay.com"
                         + lot.get("href")
                     )
-
+            
                     unique_id = f"{lot_link}_{price}"
-
-                    # Антидубликат
+            
                     if unique_id in sent_lots:
                         continue
-
+            
                     sent_lots.add(unique_id)
-
-                    print(
-                        f"[+] ЛОТ | "
-                        f"{price} ₽ | "
-                        f"{seller}"
-                    )
-
-                    # Telegram
+            
+                    print("ОТПРАВЛЯЮ В TG")
+            
                     await bot.send_message(
                         CHAT_ID,
-                        f"🔥 <b>Дешевый лот найден!</b>\n\n"
-                        f"🎮 Сервер: <b>{SERVER_NAME}</b>\n"
-                        f"💰 Цена: <b>{price} ₽</b>\n"
-                        f"👤 Продавец: <b>{seller}</b>\n\n"
-                        f"🔗 {lot_link}"
+                        f"🔥 Дешевый лот!\n\n"
+                        f"💰 {price} ₽\n"
+                        f"👤 {seller}\n\n"
+                        f"{lot_link}"
                     )
-
+            
                 except Exception as e:
-                    print("Ошибка лота:", e)
+                    print(e)
 
             await asyncio.sleep(CHECK_DELAY)
 
