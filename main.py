@@ -236,19 +236,11 @@ async def main():
 
     print("Бот запущен")
 
-    parser_task = asyncio.create_task(
-        check_lots()
-    )
+    # Запускаем парсер отдельно
+    asyncio.create_task(check_lots())
 
-    polling_task = asyncio.create_task(
-        dp.start_polling(bot)
-    )
-
-    await asyncio.gather(
-        parser_task,
-        polling_task
-    )
-
+    # Telegram polling
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())
